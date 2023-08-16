@@ -1,0 +1,15 @@
+# Blender MTL File: 'Logs.blend'
+# Material Count: 1
+
+newmtl Logs
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd Logs_BaseColor.png
+map_Ks Logs_Metallic.png
+map_Bump Logs_Normal.png

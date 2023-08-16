@@ -179,7 +179,6 @@ int main() {
     // -------------------------
     Shader ourShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
-    //Shader textureShader("resources/shaders/texture.vs", "resources/shaders/texture.fs");
 
     float skyboxVertices[] = {
             // aPos
@@ -251,15 +250,15 @@ int main() {
 
     // load grass texture
     //------------
-    float planeVertices[] = {
-            // positions            // normals                                  // texture coords
-            10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-            -10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-            -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+    float grassVertices[] = {
+            // positions                            // normals                      // texture coords
+            -100.0f, -0.25f,  100.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+            100.0f, -0.25f,  100.0f,  0.0f, 1.0f, 0.0f,  100.0f,  0.0f,
+            -100.0f, -0.25f, -100.0f,  0.0f, 1.0f, 0.0f,   0.0f, 100.0f,
 
-            10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-            -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
-            10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
+            -100.0f, -0.25f, -100.0f,  0.0f, 1.0f, 0.0f,   0.0f, 100.0f,
+            100.0f, -0.25f,  100.0f,  0.0f, 1.0f, 0.0f,  100.0f,  0.0f,
+            100.0f, -0.25f, -100.0f,  0.0f, 1.0f, 0.0f,  100.0f, 100.0f
     };
 
     unsigned int grassVAO,grassVBO;
@@ -267,7 +266,7 @@ int main() {
     glGenBuffers(1, &grassVBO);
     glBindVertexArray(grassVAO);
     glBindBuffer(GL_ARRAY_BUFFER, grassVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(grassVertices), grassVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)nullptr);
     glEnableVertexAttribArray(1);
@@ -289,6 +288,9 @@ int main() {
     Model modelKlupa("resources/objects/garden_table_obj/garden_table.obj");
     modelKlupa.SetShaderTextureNamePrefix("material.");
 
+    Model modelDrva("resources/objects/logs/Logs.obj");
+    modelDrva.SetShaderTextureNamePrefix("material.");
+
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
     pointLight.ambient = glm::vec3(1.0, 1.0, 1.0);
@@ -302,8 +304,8 @@ int main() {
     DirLight& dirLight = programState->dirLight;
     dirLight.direction = glm::vec3(-0.2f, -1.0f, -0.3f);
     dirLight.ambient = glm::vec3(0.5f, 0.5f, 0.5f);
-    dirLight.diffuse = glm::vec3(0.2f, 0.2f, 0.2f);
-    dirLight.specular = glm::vec3(0.1f, 0.1f, 0.1f);
+    dirLight.diffuse = glm::vec3(0.7f, 0.7f, 0.7f);
+    dirLight.specular = glm::vec3(0.2f, 0.2f, 0.2f);
 
 
     // draw in wireframe
@@ -355,33 +357,50 @@ int main() {
 
         // render the kazan
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model,glm::vec3(0.0f));
-        model = glm::scale(model, glm::vec3(0.001f));
+        model = glm::translate(model,glm::vec3(0.0f,-0.20f,0.1f));
+        model = glm::scale(model, glm::vec3(0.0004f));
         ourShader.setMat4("model", model);
         modelKazan.Draw(ourShader);
 
         // render the pivo
         model = glm::mat4(1.0f);
-        model = glm::translate(model,glm::vec3(0.3f,0.0f,0.0f));
-        model = glm::scale(model, glm::vec3(0.01f));
+        model = glm::translate(model,glm::vec3(-0.012f,-0.19572f,0.31f));
+        model = glm::scale(model, glm::vec3(0.0033f));
+        model = glm::rotate(model,glm::radians(60.0f), glm::vec3(0.0, 1.0, 0.0));
+        ourShader.setMat4("model", model);
+        modelPivo.Draw(ourShader);
+
+        // render the pivo 2
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,glm::vec3(0.012f,-0.19572f,0.29f));
+        model = glm::scale(model, glm::vec3(0.0033f));
+        model = glm::rotate(model,glm::radians(-80.0f), glm::vec3(0.0, 1.0, 0.0));
         ourShader.setMat4("model", model);
         modelPivo.Draw(ourShader);
 
         // render the klupa
         model = glm::mat4(1.0f);
-        model = glm::translate(model,glm::vec3(0.0f,0.0f,0.45f));
+        model = glm::translate(model,glm::vec3(0.0f,-0.25f,0.3f));
         model = glm::rotate(model,glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
-        model = glm::scale(model, glm::vec3(0.1f));
+        model = glm::scale(model, glm::vec3(0.05f));
         ourShader.setMat4("model", model);
         modelKlupa.Draw(ourShader);
 
+        // render the drva
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,glm::vec3(0.13f,-0.25f,0.2f));
+        model = glm::rotate(model,glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
+        model = glm::scale(model, glm::vec3(0.05f));
+        ourShader.setMat4("model", model);
+        modelDrva.Draw(ourShader);
+
         // render grass texture
-        //textureShader.use();
+        ourShader.setMat4("model",glm::scale(glm::mat4(1.0f),glm::vec3(0.15f,1.0f,0.15f)));
         glBindTexture(GL_TEXTURE_2D, grassTexture);
         glBindVertexArray(grassVAO);
         glDrawArrays(GL_TRIANGLES,0,6);
 
-        // draw skybox
+        /*// draw skybox
         glDepthFunc(GL_LEQUAL);
         skyboxShader.use();
         view = glm::mat4(glm::mat3(programState->camera.GetViewMatrix()));
@@ -394,7 +413,7 @@ int main() {
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
         glDepthFunc(GL_LESS);
-
+        */
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
