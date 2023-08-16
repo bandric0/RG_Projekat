@@ -62,8 +62,6 @@ struct ProgramState {
     bool ImGuiEnabled = false;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
-    glm::vec3 kazanPosition = glm::vec3(0.0f);
-    float kazanScale = 0.05f;
     PointLight pointLight;
     DirLight dirLight;
     ProgramState()
@@ -166,10 +164,22 @@ int main() {
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
 
+    //blending
+    // -----------------------------
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    //Face cull
+    // -----------------------------
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+    glFrontFace(GL_CW);
+
     // build and compile shaders
     // -------------------------
     Shader ourShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
+    //Shader textureShader("resources/shaders/texture.vs", "resources/shaders/texture.fs");
 
     float skyboxVertices[] = {
             // aPos
@@ -222,7 +232,7 @@ int main() {
     glBindVertexArray(skyboxVAO);
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)nullptr);
     glEnableVertexAttribArray(0);
 
     vector<std::string> faces{
@@ -239,10 +249,45 @@ int main() {
     skyboxShader.use();
     skyboxShader.setInt("skybox",0);
 
+    // load grass texture
+    //------------
+    float planeVertices[] = {
+            // positions            // normals                                  // texture coords
+            10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+            -10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+            -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+
+            10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+            -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+            10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
+    };
+
+    unsigned int grassVAO,grassVBO;
+    glGenVertexArrays(1, &grassVAO);
+    glGenBuffers(1, &grassVBO);
+    glBindVertexArray(grassVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, grassVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)nullptr);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glBindVertexArray(0);
+
+    unsigned int grassTexture = loadTexture("resources/textures/grass.jpg");
+
     // load models
     // -----------
-    Model ourModel("resources/objects/kazan2/Distiller.obj");
-    ourModel.SetShaderTextureNamePrefix("material.");
+    Model modelKazan("resources/objects/kazan2/Distiller.obj");
+    modelKazan.SetShaderTextureNamePrefix("material.");
+
+    Model modelPivo("resources/objects/pivo/pivo.obj");
+    modelPivo.SetShaderTextureNamePrefix("material.");
+
+    Model modelKlupa("resources/objects/garden_table_obj/garden_table.obj");
+    modelKlupa.SetShaderTextureNamePrefix("material.");
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
@@ -256,9 +301,9 @@ int main() {
 
     DirLight& dirLight = programState->dirLight;
     dirLight.direction = glm::vec3(-0.2f, -1.0f, -0.3f);
-    dirLight.ambient = glm::vec3(1.0f, 1.0f, 1.0f);
-    dirLight.diffuse = glm::vec3(1.0f, 1.0f, 1.0f);
-    dirLight.specular = glm::vec3(1.0f, 1.0f, 1.0f);
+    dirLight.ambient = glm::vec3(0.5f, 0.5f, 0.5f);
+    dirLight.diffuse = glm::vec3(0.2f, 0.2f, 0.2f);
+    dirLight.specular = glm::vec3(0.1f, 0.1f, 0.1f);
 
 
     // draw in wireframe
@@ -277,11 +322,11 @@ int main() {
         // -----
         processInput(window);
 
-
         // render
         // ------
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 
         // don't forget to enable shader before setting uniforms
         ourShader.use();
@@ -303,18 +348,53 @@ int main() {
         ourShader.setFloat("material.shininess", 32.0f);
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
-                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
+                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.01f, 100.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
-        // render the loaded model
+        // render the kazan
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model,
-                               programState->kazanPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->kazanScale));    // it's a bit too big for our scene, so scale it down
+        model = glm::translate(model,glm::vec3(0.0f));
+        model = glm::scale(model, glm::vec3(0.001f));
         ourShader.setMat4("model", model);
-        ourModel.Draw(ourShader);
+        modelKazan.Draw(ourShader);
+
+        // render the pivo
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,glm::vec3(0.3f,0.0f,0.0f));
+        model = glm::scale(model, glm::vec3(0.01f));
+        ourShader.setMat4("model", model);
+        modelPivo.Draw(ourShader);
+
+        // render the klupa
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,glm::vec3(0.0f,0.0f,0.45f));
+        model = glm::rotate(model,glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
+        model = glm::scale(model, glm::vec3(0.1f));
+        ourShader.setMat4("model", model);
+        modelKlupa.Draw(ourShader);
+
+        // render grass texture
+        //textureShader.use();
+        glBindTexture(GL_TEXTURE_2D, grassTexture);
+        glBindVertexArray(grassVAO);
+        glDrawArrays(GL_TRIANGLES,0,6);
+
+        // draw skybox
+        glDepthFunc(GL_LEQUAL);
+        skyboxShader.use();
+        view = glm::mat4(glm::mat3(programState->camera.GetViewMatrix()));
+        skyboxShader.setMat4("view", view);
+        skyboxShader.setMat4("projection", projection);
+        // skybox cube
+        glBindVertexArray(skyboxVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+        glDepthFunc(GL_LESS);
+
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -407,8 +487,6 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::DragFloat3("Backpack position", (float*)&programState->kazanPosition);
-        ImGui::DragFloat("Backpack scale", &programState->kazanScale, 0.05, 0.1, 4.0);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
