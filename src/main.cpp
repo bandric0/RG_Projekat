@@ -179,6 +179,7 @@ int main() {
     // -------------------------
     Shader ourShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
+    Shader blendingShader("resources/shaders/blending.vs", "resources/shaders/blending.fs");
 
     float skyboxVertices[] = {
             // aPos
@@ -248,6 +249,32 @@ int main() {
     skyboxShader.use();
     skyboxShader.setInt("skybox",0);
 
+    // load axe texture (for blending)
+    //------------
+    float axeVertices[] = {
+            0.0f, 0.0f,  0.905f, 0.0f,0.0f,
+            0.846f, 0.0f,  0.905f, 1.0f,0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f,1.0f,
+
+            0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            0.846f, 0.0f,  0.905f, 1.0f, 0.0f,
+            0.846f, 0.0f, 0.0f, 1.0f,1.0f
+    };
+
+    unsigned int axeVAO,axeVBO;
+    glGenVertexArrays(1, &axeVAO);
+    glGenBuffers(1, &axeVBO);
+    glBindVertexArray(axeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, axeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(axeVertices), axeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)nullptr);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
+
+    unsigned int axeTexture = loadTexture("resources/textures/axe.png");
+
     // load grass texture
     //------------
     float grassVertices[] = {
@@ -295,7 +322,7 @@ int main() {
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
     pointLight.ambient = glm::vec3(1.0, 1.0, 1.0);
     pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
-    pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
+    pointLight.specular = glm::vec3(0.2, 0.2, 0.2);
 
     pointLight.constant = 1.0f;
     pointLight.linear = 0.05f;
@@ -332,7 +359,7 @@ int main() {
 
         // don't forget to enable shader before setting uniforms
         ourShader.use();
-        pointLight.position = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
+        pointLight.position = glm::vec3(1.0 * cos(currentFrame), 4.0f, 1.0 * sin(currentFrame));
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -350,7 +377,7 @@ int main() {
         ourShader.setFloat("material.shininess", 32.0f);
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
-                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.01f, 100.0f);
+                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.01f, 100000000000.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
@@ -400,7 +427,23 @@ int main() {
         glBindVertexArray(grassVAO);
         glDrawArrays(GL_TRIANGLES,0,6);
 
-        /*// draw skybox
+        //render axe
+        glDisable(GL_CULL_FACE);
+        blendingShader.use();
+        blendingShader.setMat4("view", view);
+        blendingShader.setMat4("projection", projection);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,glm::vec3(0.13f,-0.2499f,0.23f));
+        model = glm::scale(model, glm::vec3(0.06f));
+        blendingShader.setMat4("model",model);
+        glBindTexture(GL_TEXTURE_2D,axeTexture);
+        glBindVertexArray(axeVAO);
+        glDrawArrays(GL_TRIANGLES,0,6);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_FRONT);
+        glFrontFace(GL_CW);
+
+        // draw skybox
         glDepthFunc(GL_LEQUAL);
         skyboxShader.use();
         view = glm::mat4(glm::mat3(programState->camera.GetViewMatrix()));
@@ -413,7 +456,7 @@ int main() {
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
         glDepthFunc(GL_LESS);
-        */
+
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
