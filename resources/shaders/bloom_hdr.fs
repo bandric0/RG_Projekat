@@ -16,11 +16,9 @@ void main()
     vec3 bloomColor = texture(bloomBlur, TexCoords).rgb;
     vec3 result = pow(hdrColor, vec3(1.0 / gamma));
     if(bloom)
-        hdrColor += bloomColor; // additive blending
+        hdrColor += bloomColor;
     if(hdr){
-        // tone mapping
         result = vec3(1.0) - exp(-hdrColor * exposure);
-        // also gamma correct while we're at it
         result = pow(result, vec3(1.0 / gamma));
     }
     FragColor = vec4(result, 1.0);

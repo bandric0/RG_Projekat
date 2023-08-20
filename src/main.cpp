@@ -7,7 +7,6 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include <learnopengl/filesystem.h>
 #include <learnopengl/shader.h>
@@ -124,8 +123,8 @@ int main() {
 
     // glfw window creation
     // --------------------
-    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    if (window == NULL) {
+    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "RG Project", nullptr, nullptr);
+    if (window == nullptr) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
@@ -160,7 +159,6 @@ int main() {
     (void) io;
 
 
-
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
@@ -184,12 +182,11 @@ int main() {
     Shader ourShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
     Shader blendingShader("resources/shaders/blending.vs", "resources/shaders/blending.fs");
-    Shader hdrShader("resources/shaders/hdr.vs", "resources/shaders/hdr.fs");
+    Shader bloomhdrShader("resources/shaders/bloom_hdr.vs", "resources/shaders/bloom_hdr.fs");
     Shader lightShader("resources/shaders/light.vs", "resources/shaders/light.fs");
-    Shader bloomShader("resources/shaders/bloom.vs", "resources/shaders/bloom.fs");
+    Shader blurShader("resources/shaders/blur.vs", "resources/shaders/blur.fs");
 
     float cubeVertices[] = {
-            // aPos
             -1.0f,  1.0f, -1.0f,
             -1.0f, -1.0f, -1.0f,
             1.0f, -1.0f,  -1.0f,
@@ -242,57 +239,13 @@ int main() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)nullptr);
     glEnableVertexAttribArray(0);
 
-    float skyboxVertices[] = {
-            // aPos
-            -1.0f,  1.0f, -1.0f,
-            -1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f,  -1.0f,
-            1.0f, -1.0f, -1.0f,
-            1.0f,  1.0f, -1.0f,
-            -1.0f,  1.0f, -1.0f,
-
-            -1.0f, -1.0f,  1.0f,
-            -1.0f, -1.0f, -1.0f,
-            -1.0f,  1.0f, -1.0f,
-            -1.0f,  1.0f, -1.0f,
-            -1.0f,  1.0f,  1.0f,
-            -1.0f, -1.0f,  1.0f,
-
-            1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f, -1.0f,
-            1.0f, -1.0f, -1.0f,
-
-            -1.0f, -1.0f,  1.0f,
-            -1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f, -1.0f,  1.0f,
-            -1.0f, -1.0f,  1.0f,
-
-            -1.0f,  1.0f, -1.0f,
-            1.0f,  1.0f, -1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            -1.0f,  1.0f,  1.0f,
-            -1.0f,  1.0f, -1.0f,
-
-            -1.0f, -1.0f, -1.0f,
-            -1.0f, -1.0f,  1.0f,
-            1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f, -1.0f,
-            -1.0f, -1.0f,  1.0f,
-            1.0f, -1.0f,  1.0f
-    };
 
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
     glBindVertexArray(skyboxVAO);
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)nullptr);
     glEnableVertexAttribArray(0);
 
@@ -339,7 +292,6 @@ int main() {
     // load grass texture
     //------------
     float grassVertices[] = {
-            // positions                            // normals                      // texture coords
             -100.0f, -0.25f,  100.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
             100.0f, -0.25f,  100.0f,  0.0f, 1.0f, 0.0f,  100.0f,  0.0f,
             -100.0f, -0.25f, -100.0f,  0.0f, 1.0f, 0.0f,   0.0f, 100.0f,
@@ -380,14 +332,13 @@ int main() {
     modelDrva.SetShaderTextureNamePrefix("material.");
 
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(0.0f, 1.0, 0.0);
-    pointLight.ambient = glm::vec3(0.6, 0.6, 0.6);
+    pointLight.position = glm::vec3(0.0f, 0.5, 0.0);
+    pointLight.ambient = glm::vec3(0.7, 0.7, 0.7);
     pointLight.diffuse = glm::vec3(0.5, 0.5, 0.5);
-    pointLight.specular = glm::vec3(0.9, 0.9, 0.9);
-
-    pointLight.constant = 0.6f;
+    pointLight.specular = glm::vec3(0.3, 0.3, 0.3);
+    pointLight.constant = 0.7f;
     pointLight.linear = 0.08f;
-    pointLight.quadratic = 0.05f;
+    pointLight.quadratic = 0.015f;
 
     DirLight& dirLight = programState->dirLight;
     dirLight.direction = glm::vec3(-0.2f, -1.0f, -0.3f);
@@ -452,12 +403,12 @@ int main() {
             std::cout << "Framebuffer not complete!" << std::endl;
     }
 
-    hdrShader.use();
-    hdrShader.setInt("hdrBuffer", 0);
-    hdrShader.setInt("bloomBlur", 1);
+    bloomhdrShader.use();
+    bloomhdrShader.setInt("hdrBuffer", 0);
+    bloomhdrShader.setInt("bloomBlur", 1);
 
-    bloomShader.use();
-    bloomShader.setInt("image",0);
+    blurShader.use();
+    blurShader.setInt("image",0);
 
     // render loop
     // -----------
@@ -484,7 +435,6 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         ourShader.use();
-        pointLight.position = glm::vec3(0.0, 0.5f, 0.0 );
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -547,7 +497,7 @@ int main() {
         modelDrva.Draw(ourShader);
 
         // render grass texture
-        ourShader.setInt("texture_diffuse1",0);
+        ourShader.setInt("material.texture_specular1",0);
         ourShader.setMat4("model",glm::scale(glm::mat4(1.0f),glm::vec3(0.15f,1.0f,0.15f)));
         glBindTexture(GL_TEXTURE_2D, grassTexture);
         glBindVertexArray(grassVAO);
@@ -598,11 +548,11 @@ int main() {
         // --------------------------------------------------
         bool horizontal = true, first_iteration = true;
         unsigned int amount = 5;
-        bloomShader.use();
+        blurShader.use();
         for (unsigned int i = 0; i < amount; i++)
         {
             glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
-            bloomShader.setInt("horizontal", horizontal);
+            blurShader.setInt("horizontal", horizontal);
             glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1] : pingpongColorbuffers[!horizontal]);  // bind texture of other framebuffer (or scene if first iteration)
             renderQuad();
             horizontal = !horizontal;
@@ -614,14 +564,14 @@ int main() {
         // 3. now render floating point color buffer to 2D quad and tonemap HDR colors to default framebuffer's (clamped) color range
         // --------------------------------------------------------------------------------------------------------------------------
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        hdrShader.use();
+        bloomhdrShader.use();
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]);
-        hdrShader.setInt("bloom", bloom);
-        hdrShader.setInt("hdr", hdr);
-        hdrShader.setFloat("exposure", exposure);
+        bloomhdrShader.setInt("bloom", bloom);
+        bloomhdrShader.setInt("hdr", hdr);
+        bloomhdrShader.setFloat("exposure", exposure);
         renderQuad();
 
 
