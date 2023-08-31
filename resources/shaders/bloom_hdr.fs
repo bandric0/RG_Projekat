@@ -14,12 +14,19 @@ void main()
     const float gamma = 2.2;
     vec3 hdrColor = texture(scene, TexCoords).rgb;
     vec3 bloomColor = texture(bloomBlur, TexCoords).rgb;
-    vec3 result = pow(hdrColor, vec3(1.0 / gamma));
-    if(bloom)
+
+    if (bloom) {
         hdrColor += bloomColor;
+    }
+
+    vec3 result = hdrColor;
+
     if(hdr){
         result = vec3(1.0) - exp(-hdrColor * exposure);
         result = pow(result, vec3(1.0 / gamma));
+    }else{
+        result = pow(hdrColor, vec3(1.0 / gamma));
     }
+
     FragColor = vec4(result, 1.0);
 }

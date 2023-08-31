@@ -30,7 +30,7 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 bool hdr = true;
 bool bloom = true;
-float exposure = 0.3f;
+float exposure = 0.75f;
 
 // camera
 float lastX = SCR_WIDTH / 2.0f;
@@ -61,7 +61,7 @@ struct DirLight {
 };
 
 struct ProgramState {
-    glm::vec3 clearColor = glm::vec3(0);
+    glm::vec3 clearColor = glm::vec3(0.0f);
     bool ImGuiEnabled = false;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
@@ -123,7 +123,7 @@ int main() {
 
     // glfw window creation
     // --------------------
-    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "RG Project", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Чича пече ракију", nullptr, nullptr);
     if (window == nullptr) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -292,13 +292,13 @@ int main() {
     // load grass texture
     //------------
     float grassVertices[] = {
-            -100.0f, -0.25f,  100.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-            100.0f, -0.25f,  100.0f,  0.0f, 1.0f, 0.0f,  100.0f,  0.0f,
-            -100.0f, -0.25f, -100.0f,  0.0f, 1.0f, 0.0f,   0.0f, 100.0f,
+            -10.0f, -0.25f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+            10.0f, -0.25f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+            -10.0f, -0.25f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
 
-            -100.0f, -0.25f, -100.0f,  0.0f, 1.0f, 0.0f,   0.0f, 100.0f,
-            100.0f, -0.25f,  100.0f,  0.0f, 1.0f, 0.0f,  100.0f,  0.0f,
-            100.0f, -0.25f, -100.0f,  0.0f, 1.0f, 0.0f,  100.0f, 100.0f
+            -10.0f, -0.25f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+            10.0f, -0.25f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+            10.0f, -0.25f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
     };
 
     unsigned int grassVAO,grassVBO;
@@ -452,12 +452,30 @@ int main() {
         ourShader.setFloat("material.shininess", 32.0f);
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
-                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.01f, 100000000000.0f);
+                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.01f, 1000000.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
+        // draw skybox
+        glDepthMask(GL_FALSE);
+        glDepthFunc(GL_LEQUAL);
+        skyboxShader.use();
+        view = glm::mat4(glm::mat3(programState->camera.GetViewMatrix()));
+        skyboxShader.setMat4("view", view);
+        skyboxShader.setMat4("projection", projection);
+        // skybox cube
+        glBindVertexArray(skyboxVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+        glDepthFunc(GL_LESS);
+        glDepthMask(GL_TRUE);
+
+        view = programState->camera.GetViewMatrix();
         // render the kazan
+        ourShader.use();
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,glm::vec3(0.0f,-0.20f,0.1f));
         model = glm::scale(model, glm::vec3(0.0004f));
@@ -503,17 +521,6 @@ int main() {
         glBindVertexArray(grassVAO);
         glDrawArrays(GL_TRIANGLES,0,6);
 
-        //render light source
-        lightShader.use();
-        lightShader.setMat4("view",view);
-        lightShader.setMat4("projection",projection);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model,pointLight.position);
-        model = glm::scale(model, glm::vec3(0.03f));
-        lightShader.setMat4("model",model);
-        glBindVertexArray(skyboxVAO);
-        glDrawArrays(GL_TRIANGLES,0,36);
-
         //render axe
         glDisable(GL_CULL_FACE);
         blendingShader.use();
@@ -530,24 +537,23 @@ int main() {
         glCullFace(GL_FRONT);
         glFrontFace(GL_CW);
 
-        // draw skybox
-        glDepthFunc(GL_LEQUAL);
-        skyboxShader.use();
-        view = glm::mat4(glm::mat3(programState->camera.GetViewMatrix()));
-        skyboxShader.setMat4("view", view);
-        skyboxShader.setMat4("projection", projection);
-        // skybox cube
+        //render light source
+        lightShader.use();
+        lightShader.setMat4("view",view);
+        lightShader.setVec3("lightColor",glm::vec3(10.0));
+        lightShader.setMat4("projection",projection);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,pointLight.position);
+        model = glm::scale(model, glm::vec3(0.018f));
+        lightShader.setMat4("model",model);
         glBindVertexArray(skyboxVAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
-        glDepthFunc(GL_LESS);
+        glDrawArrays(GL_TRIANGLES,0,36);
 
         // 2. blur bright fragments with two-pass Gaussian Blur
         // --------------------------------------------------
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         bool horizontal = true, first_iteration = true;
-        unsigned int amount = 5;
+        unsigned int amount = 10;
         blurShader.use();
         for (unsigned int i = 0; i < amount; i++)
         {

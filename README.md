@@ -1,6 +1,6 @@
 # CG Project
-Faculty project from Computer Graphics.   
-[Video showcasing program.](https://www.youtube.com/watch?v=c4iOWVUfwTo)
+Faculty project from Computer Graphics.  
+[Video showcasing program.](https://www.youtube.com/watch?v=sjH4vH9eUwM)
 
 ## Instructions for running the program and controls 
 1. `git clone git@github.com:bandric0/RG_Projekat.git`
@@ -16,3 +16,6 @@ Faculty project from Computer Graphics.
 ## Implemented areas
 Group A : Cubemaps/Skybox  
 Group B : Hdr/Bloom
+
+## Screenshot
+![](resources/shaders/screenshot.png)
