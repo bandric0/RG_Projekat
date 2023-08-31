@@ -1,5 +1,5 @@
 # CG Project
-Faculty project from Computer Graphics.  
+Computer Graphics faculty project.  
 [Video showcasing program.](https://www.youtube.com/watch?v=sjH4vH9eUwM)
 
 ## Instructions for running the program and controls 
